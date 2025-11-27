@@ -7,5 +7,9 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public interface EntityAccountPreferencesService {
 
+    EntityAccountPreferencesDto findById(@NotNull Long id, @NotNull Long accountId);
+
+    EntityAccountPreferencesDto createOrUpdate(@NotNull EntityAccountPreferencesDto preferences);
+
     EntityAccountPreferencesDto findLastByAccountId(@NotNull Long accountId);
 }

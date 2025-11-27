@@ -15,10 +15,23 @@ public class EntityAccountPreferencesServiceImpl implements EntityAccountPrefere
     private final EntityAccountPreferencesRepository entityAccountPreferencesRepository;
     private final EntityAccountPreferencesConverter entityAccountPreferencesConverter;
 
+    public EntityAccountPreferencesDto createOrUpdate(EntityAccountPreferencesDto preferences) {
+        return entityAccountPreferencesConverter.toDto(
+                entityAccountPreferencesRepository.save(
+                        entityAccountPreferencesConverter.toEntity(preferences)));
+    }
+
     @Override
     public EntityAccountPreferencesDto findLastByAccountId(Long accountId) {
         EntityAccountPreferences preferences = entityAccountPreferencesRepository.findFirstByAccountIdOrderByCreatedDesc(accountId)
                 .orElseThrow();
+
+        return entityAccountPreferencesConverter.toDto(preferences);
+    }
+
+    public EntityAccountPreferencesDto findById(Long id, Long accountId) {
+        EntityAccountPreferences preferences = entityAccountPreferencesRepository.findByIdAndAccountId(id, accountId)
+                .orElseThrow(() -> new RuntimeException("Entity account preferences history not found"));
 
         return entityAccountPreferencesConverter.toDto(preferences);
     }

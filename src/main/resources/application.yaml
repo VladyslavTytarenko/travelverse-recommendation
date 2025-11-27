@@ -1,1 +1,58 @@
-spring.application.name=travelverse-recommendation
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/web3events_local?characterEncoding=UTF-8&enabledTLSProtocols=TLSv1.2
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  liquibase:
+    enabled: true
+
+entity-recommendation:
+  resultsLimit: 100
+  excludedRatingTo: 2
+  weights:
+    category: 0.35
+    crowd: 0.2
+    distance: 0.05
+    quality: 0.1
+    budget: 0.1
+    hiddenGem: 0.10
+    businessRules: 0.10
+  searchRadiusInKm: 100
+  category:
+    relatedScore: 0.25
+  distance:
+    walking: 3
+    biking: 5
+    publicTransport: 10
+    car: 20
+  rating:
+    base: 3.5
+    scale: 1.5
+    weight:
+      rating: 0.6
+      reviews: 0.3
+      expert: 0.1
+  traffic:
+    cap: 1.1
+    default: 0.2
+    neutralWeight: 0.3
+    defaultScore: 50
+
+bestTime:
+  apiUrl: "https://besttime.app"
+  apiKey: "test"
+  collectionId: "test"
+  api:
+    findVenue: "/api/v1/forecasts"
+    venueFilter: "/api/v1/venues/filter"
+    addVenueToCollection: "/api/v1/collection/{collectionId}/{venueId}"

@@ -1,0 +1,193 @@
+databaseChangeLog:
+  - changeSet:
+      id: ef290fd4-0369-49b3-a601-b99da61d1444
+      author: VladyslavTytarenko
+      comment: Add is_hidden_gem column to entity
+      changes:
+        - sql:
+            sql:
+              ALTER TABLE entity ADD COLUMN is_hidden_gem TINYINT(1) NOT NULL DEFAULT 0;
+
+  - changeSet:
+      id: d5a481de-865b-4c1f-9e8b-b83ec1531c1b
+      author: VladyslavTytarenko
+      comment: Add business_score column to entity
+      changes:
+        - sql:
+            sql:
+              ALTER TABLE entity ADD COLUMN business_score INT(18) NULL;
+
+  - changeSet:
+      id: 21cf26d3-926a-46d6-9de4-055280075e4d
+      author: VladyslavTytarenko
+      comment: Create AI assistant tables
+      changes:
+        - sql:
+            sql:
+              CREATE TABLE IF NOT EXISTS entity_account_preferences (
+              id                          INT(18)                NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              preferences                 JSON                   NOT NULL,
+              account_id                  INT(18)                    NULL,
+              created                     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated                     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              CONSTRAINT fk_entity_account_preferences_history_account_id FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE SET NULL
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              CREATE TABLE IF NOT EXISTS entity_recommendation_history (
+              id                            INT(18)                NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              entity_account_preferences_id INT(18)                NOT NULL,
+              entity_id                     INT(18)                NOT NULL,
+              traffic                       INT(18)                    NULL,
+              score                         DECIMAL(5,2)           NOT NULL,
+              created                       TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              CONSTRAINT fk_entity_recommendation_history_entity_id FOREIGN KEY (entity_id) REFERENCES entity (id) ON DELETE CASCADE,
+              CONSTRAINT fk_entity_recommendation_history_entity_account_preferences_id FOREIGN KEY (entity_account_preferences_id) REFERENCES entity_account_preferences (id) ON DELETE CASCADE
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              CREATE TABLE IF NOT EXISTS ai_assistant_dialog (
+              id                          INT(18)                NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              account_id                  INT(18)                    NULL,
+              created                     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              CONSTRAINT fk_ai_assistant_dialog_history_account_id FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE SET NULL
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              CREATE TABLE IF NOT EXISTS ai_assistant_message (
+              id                          INT(18)                         NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              dialog_id                   INT(18)                         NOT NULL,
+              message_sender              ENUM('AI_ASSISTANT', 'ACCOUNT') NOT NULL,
+              message                     JSON                            NOT NULL,
+              created                     TIMESTAMP                       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              CONSTRAINT fk_ai_assistant_message_dialog_id FOREIGN KEY (dialog_id) REFERENCES ai_assistant_dialog (id) ON DELETE CASCADE
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              CREATE TABLE IF NOT EXISTS category (
+              id                          INT(18)                NOT NULL AUTO_INCREMENT PRIMARY KEY
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              CREATE TABLE IF NOT EXISTS category_locale (
+              id                          INT(18)                NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              category_id                 INT(18)                NOT NULL,
+              value                       VARCHAR(128)           NOT NULL,
+              locale                      VARCHAR(2)             NOT NULL,
+
+              CONSTRAINT fk_category_locale_locale FOREIGN KEY (locale) REFERENCES locale (iso_code) ON DELETE CASCADE,
+              CONSTRAINT fk_category_locale_category_id FOREIGN KEY (category_id) REFERENCES category (id) ON DELETE CASCADE
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              CREATE TABLE IF NOT EXISTS subcategory (
+              id                          INT(18)                NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              category_id                 INT(18)                NOT NULL,
+
+              CONSTRAINT fk_subcategory_category_id FOREIGN KEY (category_id) REFERENCES category (id) ON DELETE CASCADE
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              CREATE TABLE IF NOT EXISTS subcategory_locale (
+              id                          INT(18)                NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              subcategory_id              INT(18)                NOT NULL,
+              value                       VARCHAR(128)           NOT NULL,
+              locale                      VARCHAR(2)             NOT NULL,
+
+              CONSTRAINT fk_subcategory_locale_locale FOREIGN KEY (locale) REFERENCES locale (iso_code) ON DELETE CASCADE,
+              CONSTRAINT fk_subcategory_locale_subcategory_id FOREIGN KEY (subcategory_id) REFERENCES subcategory (id) ON DELETE CASCADE
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              ALTER TABLE entity_type
+              DROP FOREIGN KEY fk_entity_type_parent;
+              ALTER TABLE entity_type
+              DROP COLUMN parent_entity_type_id;
+
+              ALTER TABLE entity_type
+              ADD COLUMN subcategory_id INT(18) NULL,
+              ADD CONSTRAINT fk_entity_type_subcategory_id FOREIGN KEY (subcategory_id) REFERENCES subcategory (id) ON DELETE SET NULL;
+
+  - changeSet:
+      id: 6101c4a5-de0e-4bd1-9cef-ab5d73879a23
+      author: VladyslavTytarenko
+      comment: Update categories
+      changes:
+        - sql:
+            sql:
+              ALTER TABLE category_locale ADD CONSTRAINT category_locale_unique_pk UNIQUE (category_id, locale);
+              ALTER TABLE subcategory_locale ADD CONSTRAINT subcategory_locale_unique_pk UNIQUE (subcategory_id, locale);
+
+              CREATE TABLE IF NOT EXISTS entity_type_subcategory (
+              entity_type_id              INT(18)                NOT NULL,
+              subcategory_id              INT(18)                NOT NULL,
+
+              CONSTRAINT fk_entity_type_subcategory_subcategory_id FOREIGN KEY (subcategory_id) REFERENCES subcategory (id) ON DELETE CASCADE,
+              CONSTRAINT fk_entity_type_subcategory_entity_type_id FOREIGN KEY (entity_type_id) REFERENCES entity_type (id) ON DELETE CASCADE
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              ALTER TABLE entity_type DROP FOREIGN KEY fk_entity_type_subcategory_id;
+              ALTER TABLE entity_type DROP COLUMN subcategory_id;
+
+  - changeSet:
+      id: fb5119f7-d661-4c09-b4d7-7f7a1acd403d
+      author: VladyslavTytarenko
+      comment: Add is_external_data and external_data_status columns to entity
+      changes:
+        - sql:
+            sql:
+              ALTER TABLE entity ADD COLUMN is_external_data TINYINT(1) NOT NULL DEFAULT 0;
+              ALTER TABLE entity ADD COLUMN external_data_status ENUM('OK', 'NOT_FOUND', 'ERROR') NULL;
+
+  - changeSet:
+      id: 4c70cf62-8519-4466-b0b5-b18eb0573223
+      author: VladyslavTytarenko
+      comment: Add is_external_data and external_data_status columns to entity
+      changes:
+        - sql:
+            sql:
+              CREATE TABLE IF NOT EXISTS entity_external_data (
+              id                      INT(18)       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              entity_id               INT(18)       NULL,
+              venue_id                VARCHAR(256)  NULL,
+              venue_timezone          VARCHAR(256)  NULL,
+              venue_dwell_time_min    INT(18)       NULL,
+              venue_dwell_time_max    INT(18)       NULL,
+              venue_dwell_time_avg    INT(18)       NULL,
+              rating                  DECIMAL(9,6)  NULL,
+              reviews                 INT(18)       NULL,
+              price_level             INT(18)       NULL,
+              monday                  JSON          NULL,
+              tuesday                 JSON          NULL,
+              wednesday               JSON          NULL,
+              thursday                JSON          NULL,
+              friday                  JSON          NULL,
+              saturday                JSON          NULL,
+              sunday                  JSON          NULL,
+              created                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated                 TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+              CONSTRAINT fk_entity_external_data_entity_id FOREIGN KEY (entity_id) REFERENCES entity (id) ON DELETE SET NULL
+              ) ENGINE = InnoDB DEFAULT CHARSET = utf8 COLLATE = utf8_unicode_ci;
+
+              ALTER TABLE entity DROP COLUMN rating;
+              ALTER TABLE entity DROP COLUMN price_level;
+              ALTER TABLE entity DROP COLUMN venue_id;
+              ALTER TABLE entity DROP COLUMN reviews;
+
+  - changeSet:
+      id: dd8652ba-e4cf-4342-b859-bee59c092490
+      author: VladyslavTytarenko
+      comment: Add score details to entity recommendation history
+      changes:
+        - sql:
+            sql:
+              ALTER TABLE entity_recommendation_history
+              ADD COLUMN category_score DECIMAL(5,2) NULL,
+              ADD COLUMN distance_score DECIMAL(5,2) NULL,
+              ADD COLUMN quality_score DECIMAL(5,2) NULL,
+              ADD COLUMN budget_score DECIMAL(5,2) NULL,
+              ADD COLUMN crowd_score DECIMAL(5,2) NULL,
+              ADD COLUMN hidden_gem_score DECIMAL(5,2) NULL,
+              ADD COLUMN business_score DECIMAL(5,2) NULL;
+
+  - changeSet:
+      id: 27479729-9714-43e8-a9aa-8e7742b5f61f
+      author: VladyslavTytarenko
+      comment: Increase size for venue ID
+      changes:
+        - sql:
+            sql:
+              ALTER TABLE entity_external_data MODIFY venue_id VARCHAR(1024) DEFAULT NULL;
